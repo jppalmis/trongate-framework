@@ -152,7 +152,7 @@ th, td {
 }
 
 td:hover {
-    cursor: pointer;
+    cursor: auto;
 }
 
 tr:hover, tr:nth-child(odd):hover {
@@ -197,6 +197,30 @@ hr {
     max-width: 940px;
     margin: 0 auto;
     padding: 1em;
+}
+
+.container-xxs {
+  max-width: 450px;
+}
+
+.container-xs {
+  max-width: 640px;
+}
+
+.container-sm {
+  max-width: 760px;
+}
+
+.container-lg {
+    max-width: 960px;
+}
+
+.container-xl {
+  max-width: 1100px;
+}
+
+.container-xxl {
+  max-width: 1300px;
 }
 
 .pagination {
@@ -383,6 +407,7 @@ hr {
     justify-content: center;
     pointer-events: none;
     position: relative;
+    margin: 0.6em;
 }
 
 .spinner::after {
@@ -417,6 +442,20 @@ hr {
   100% {
     transform: rotate(360deg);
   }
+}
+
+.blink{
+    text-decoration: blink;
+    -webkit-animation-name: blinker;
+    -webkit-animation-duration: 0.5s;
+    -webkit-animation-iteration-count:infinite;
+    -webkit-animation-timing-function:ease-in-out;
+    -webkit-animation-direction: alternate;
+}
+
+@-webkit-keyframes blinker {
+  from {opacity: 1.0;}
+  to {opacity: 0.0;}
 }
 
 @media screen and (max-width: 550px) {
