@@ -94,9 +94,18 @@ function url_title($value, $transliteration = true) {
     }
     $slug = html_entity_decode($value, ENT_QUOTES, 'UTF-8');
     $slug = preg_replace('~[^\pL\d]+~u', '-', $slug);
-    $slug = trim($slug, '-');
+    $slug = trim($slug, '- ');
     $slug = strtolower($slug);
     return $slug;
+}
+
+function return_file_info($file_string) {
+    // Get the file extension
+    $file_extension = pathinfo($file_string, PATHINFO_EXTENSION);
+    // Get the file name without the extension
+    $file_name = str_replace("." . $file_extension, "", $file_string);
+    // Return an array containing the file name and file extension
+    return array("file_name" => $file_name, "file_extension" => "." . $file_extension);
 }
 
 function api_auth() {
@@ -179,18 +188,18 @@ function api_auth() {
     }
 }
 
-function make_rand_str($strlen, $uppercase = false) {
+function make_rand_str($length = 32, $uppercase = false) {
     $characters = '23456789abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ';
-    $random_string = '';
-    for ($i = 0; $i < $strlen; $i++) {
-        $random_string .= $characters[mt_rand(0, strlen($characters) - 1)];
+    $charactersLength = strlen($characters);
+    $randomString = '';
+    for ($i = 0; $i < $length; $i++) {
+        $randomByte = random_bytes(1);
+        $randomInt = ord($randomByte) % $charactersLength;
+        $randomString .= $characters[$randomInt];
     }
-
-    if ($uppercase == true) {
-        $random_string = strtoupper($random_string);
-    }
-    return $random_string;
+    return $uppercase ? strtoupper($randomString) : $randomString;
 }
+
 
 function json($data, $kill_script = null) {
     echo '<pre>' . json_encode($data, JSON_PRETTY_PRINT) . '</pre>';

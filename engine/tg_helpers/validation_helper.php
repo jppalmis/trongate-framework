@@ -74,10 +74,6 @@ class Validation_helper {
             case 'valid_time':
                 $this->valid_time($validation_data);
                 break;
-            case 'unique':
-                $inner_value = $validation_data['inner_value'] ?? 0;
-                $this->unique($validation_data, $inner_value);
-                break;
             default:
                 $this->run_special_test($validation_data);
                 break;
@@ -86,6 +82,8 @@ class Validation_helper {
     }
 
     public function run($validation_array=null) {
+
+        $this->csrf_protect();
 
         if (isset($_SESSION['form_submission_errors'])) {
             unset($_SESSION['form_submission_errors']);
@@ -385,50 +383,6 @@ class Validation_helper {
         }
     }
 
-    private function unique($key, $label, $posted_value, $inner_value=null) {
-
-        if ($posted_value == '') {
-            return;
-        }
-
-        $forbidden_values[] = $posted_value;
-
-        $bits = explode(',', $inner_value);
-        if (count($bits) == 2) {
-            $allowed_id = $bits[0];
-            $table_name = $bits[1];
-        } else {
-            $allowed_id = $inner_value;
-            $table_name = SEGMENTS[1];
-        }
-
-        settype($allowed_id, 'int');
-
-        require_once(__DIR__.'/../Model.php');
-        $model = new Model();
-
-        $sql = 'select * from '.$table_name;
-        $rows = $model->query($sql, 'object');
-
-        $forbidden_values[] = trim(strip_tags($posted_value));
-        $forbidden_values[] = preg_replace('/\s+/', ' ', $posted_value);
-
-        if (!defined('ALLOW_SPECIAL_CHARACTERS')) {
-            //filter out potentially malicious characters
-            $forbidden_values[] = remove_special_characters($posted_value);
-        }
-
-        foreach($rows as $row) {
-            $row_id = $row->id;
-            $row_target_value = $row->$key;
-            if ((in_array($row_target_value, $forbidden_values)) && ($row->id !== $allowed_id)) {
-                $this->form_submission_errors[$key][] = 'The ' . $label . ' that you submitted is already on our system.';
-                break;                 
-            }
-        }
-    }
-
-
     private function greater_than($key, $label, $posted_value, $inner_value) {
 
         if (((is_numeric($_POST[$key])) && ($_POST[$key]<=$inner_value)) && ($posted_value !== '')) {
@@ -447,8 +401,33 @@ class Validation_helper {
 
     private function valid_email($validation_data) {
         extract($validation_data);
+
         if ((!filter_var($posted_value, FILTER_VALIDATE_EMAIL)) && ($posted_value !== '')) {
             $this->form_submission_errors[$key][] = 'The '.$label.' field must contain a valid email address.';
+            return;
+        }
+
+        // Check if the email address contains an @ symbol and a valid domain name
+        $at_pos = strpos($posted_value, '@');
+        if ($at_pos === false || $at_pos === 0) {
+            $this->form_submission_errors[$key][] = 'The '.$label.' is not properly formatted.';
+            return;
+        }
+
+        // Make sure the email address is not too long
+        if (strlen($posted_value) > 254) {
+            $this->form_submission_errors[$key][] = 'The '.$label.' is too long.';
+            return;
+        }
+
+        // Check if the internet is available
+        if($sock = @fsockopen('www.google.com', 80)) {
+           fclose($sock);
+            $domain_name = substr($posted_value, $at_pos + 1);
+            if (!checkdnsrr($domain_name, 'MX')) {
+                $this->form_submission_errors[$key][] = 'The '.$label.' field contains an invalid domain name';
+                return;
+            }
         }
 
     }
@@ -496,9 +475,6 @@ class Validation_helper {
                 case 'max_length':
                     $this->max_length($key, $label, $posted_value, $inner_value);
                     break;
-                case 'unique':
-                    $this->unique($key, $label, $posted_value, $inner_value);
-                    break;
                 case 'greater_than':
                     $this->greater_than($key, $label, $posted_value, $inner_value);
                     break;
@@ -533,6 +509,29 @@ class Validation_helper {
     }
 
     private function validate_file($key, $label, $rules) {
+        if(!isset($_FILES[$key])) {
+            $this->handle_missing_file_error($key, $label);
+            return;
+        }
+        if ($_FILES[$key]['name'] == '') {
+            $this->handle_empty_file_error($key, $label);
+            return;
+        }
+        $this->run_file_validation($key, $rules);
+    }
+
+    private function handle_missing_file_error($key, $label) {
+        $error_msg = 'You are required to select a file.';
+        $this->form_submission_errors[$key][] = $error_msg;
+    }
+
+    private function handle_empty_file_error($key, $label) {
+        $error_msg = 'You did not select a file.';
+        $this->form_submission_errors[$key][] = $error_msg;
+    }
+
+    private function run_file_validation($key, $rules) {
+        // file validation logic here
         require_once('file_validation_helper.php');
     }
 
@@ -586,11 +585,31 @@ class Validation_helper {
         return $value;
     }
 
+    private function csrf_protect() {
+        //make sure they have posted csrf_token
+        if (!isset($_POST['csrf_token'])) {
+            $this->csrf_block_request();
+        } else {
+            $result = password_verify(session_id(), $_POST['csrf_token']);
+            if ($result == false) {
+                $this->csrf_block_request();
+            }
+
+            unset($_POST['csrf_token']);
+        }
+    }
+
+    private function csrf_block_request() {
+        header("location: ".BASE_URL);
+        die();
+    }    
+
 }
 
 function validation_errors($opening_html=NULL, $closing_html=NULL) {
 
     if (isset($_SESSION['form_submission_errors'])) {
+
         $validation_err_str = '';
         $validation_errors = [];
         $closing_html = (isset($closing_html)) ? $closing_html : false;
@@ -630,4 +649,5 @@ function validation_errors($opening_html=NULL, $closing_html=NULL) {
         }
         echo $validation_err_str;
     }
+
 }
