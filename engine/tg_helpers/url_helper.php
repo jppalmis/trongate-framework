@@ -14,6 +14,12 @@ function segment($num, $var_type = null) {
     return $value;
 }
 
+function remove_query_string($string) {
+    $parts = explode("?", $string, 2);
+    return $parts[0];
+}
+
+
 function previous_url() {
     if (isset($_SERVER['HTTP_REFERER'])) {
         $url = $_SERVER['HTTP_REFERER'];
@@ -39,7 +45,7 @@ function redirect($target_url) {
     die();
 }
 
-function anchor($target_url, $text, $attributes = NULL, $additional_code = NULL) {
+function anchor($target_url, $text, $attributes = null, $additional_code = null) {
 
     $str = substr($target_url, 0, 4);
     if ($str != 'http') {
@@ -50,7 +56,7 @@ function anchor($target_url, $text, $attributes = NULL, $additional_code = NULL)
 
     $text_type = gettype($text);
 
-    if ($text_type == 'boolean') {
+    if ($text_type === 'boolean') {
         return $target_url;
     }
 
@@ -88,7 +94,7 @@ function nice_price($num) {
  * @return string The slugified version of the string.
  */
 function url_title($value, $transliteration = true) {
-    if (extension_loaded('intl') && $transliteration == true) {
+    if (extension_loaded('intl') && $transliteration === true) {
         $transliterator = \Transliterator::create('Any-Latin; Latin-ASCII');
         $value = $transliterator->transliterate($value);
     }
@@ -120,7 +126,6 @@ function api_auth() {
         $filepath = APPPATH . 'modules/' . $current_module . '/assets/api.json';
 
         if (file_exists($filepath)) {
-
             //extract the rules for the current path
             $target_method = $segments[1];
             $settings = file_get_contents($filepath);
@@ -131,34 +136,30 @@ function api_auth() {
 
             foreach ($endpoints as $rule_name => $api_rule_value) {
 
-                $segments_match = true;
-
                 if (isset($api_rule_value['url_segments'])) {
 
-                    //ignore placeholders for decent comparison
+                    //make sure the current URL segments match against the required segments
                     $target_url_segments = $api_rule_value['url_segments'];
                     $bits = explode('/', $target_url_segments);
-                    $required_bits = [];
+                    $required_segments = [];
 
                     foreach ($bits as $key => $value) {
-
                         if (!is_numeric(strpos($value, '{'))) {
                             $required_segments[$key] = $value;
                         }
                     }
 
+                    $num_required_segments = count($required_segments);
+
                     foreach ($current_uri_bits as $key => $value) {
-
                         if (isset($required_segments[$key])) {
-
-                            if ($value !== $required_segments[$key]) {
-                                $segments_match = false;
+                            if ($value === $required_segments[$key]) {
+                                $num_required_segments--;
                             }
                         }
                     }
 
-                    if ($segments_match == true) {
-
+                    if ($num_required_segments === 0) {
                         $token_validation_data['endpoint'] = $rule_name;
                         $token_validation_data['module_name'] = $current_module;
                         $token_validation_data['module_endpoints'] = $endpoints;
@@ -168,7 +169,7 @@ function api_auth() {
                         if (file_exists($api_class_location)) {
                             include_once $api_class_location;
                             $api_helper = new Api;
-                            $api_helper->_validate_token($token_validation_data);
+                            $api_helper->validate_token($token_validation_data);
                             $validation_complete = true;
                         }
                     }
@@ -181,7 +182,7 @@ function api_auth() {
         }
     }
 
-    if ($validation_complete == false) {
+    if ($validation_complete === false) {
         http_response_code(401);
         echo "Invalid token.";
         die();
