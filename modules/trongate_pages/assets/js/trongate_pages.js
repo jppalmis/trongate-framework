@@ -54,12 +54,25 @@ function tgpClickNewTextBlock() {
 }
 
 window.addEventListener("mousedown", (ev) => {
-
   // Attempt open toolbar or img modal (headline, text, button, divider toolbars are available)
   let clickedEl = ev.target;
   if (!trongatePagesObj.defaultActiveElParent.contains(clickedEl)) {
     return; // outside of editor area
   } else {
+
+    if(typeof excludeFromClicks === 'object') {
+      const excludeFromClicksLen = excludeFromClicks.length;
+      if(excludeFromClicksLen>0) {
+        // Are we inside one of the excluded elements?
+        for (var i = 0; i < excludeFromClicks.length; i++) {
+          const excludedContainerEl = clickedEl.closest(excludeFromClicks[i])
+          if(excludedContainerEl) {
+            return;
+          } 
+        }
+      }
+    }
+
     tgpHandleElementClick(clickedEl)
   }
 });
@@ -68,7 +81,7 @@ function tgpHandleElementClick(clickedEl) {
 
   if (clickedEl.tagName === 'IMG') {
     // Display image modal here
-    buildEditImgModal(clickedEl);
+    tgpBuildEditImgModal(clickedEl);
     return null; // No toolbar should be drawn for the image element
   }
 
@@ -94,6 +107,7 @@ function tgpHandleElementClick(clickedEl) {
 }
 
 function tgpClearSelection() {
+  currentSelectedRange = null;
   if (window.getSelection) {
     // Clear the selection using the Selection API
     const selection = window.getSelection();
@@ -109,6 +123,8 @@ function tgpSavePage() {
     tgpSavingPage = true; //so that pointers do not get added to HRs upon mouseup
 
     tgpRemoveContentEditables();
+
+    let pageContent = document.getElementsByClassName('page-content')[0];
 
     setTimeout(() => {
         const params = {
@@ -280,6 +296,7 @@ function tgpRemovePointersFromHrs() {
 
 function tgpSendSaveRequest(params) {
     const targetUrl = trongatePagesObj.baseUrl + 'api/update/trongate_pages/' + trongatePagesObj.trongatePagesId;
+
     const http = new XMLHttpRequest();
     http.open('put', targetUrl);
     http.setRequestHeader('Content-type', 'application/json');

@@ -1,3 +1,15 @@
+// Define a global variable to store the current selection range.
+let currentSelectedRange = null;
+
+// Function to restore the saved selection.
+function tgpRestoreSelection() {
+    if (currentSelectedRange) {
+        const selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(currentSelectedRange);
+    }
+}
+
 function tgpDeletePage() {
   tgpReset(['selectedRange', 'codeviews', 'customModals', 'toolbars', 'activeEl']);
 
@@ -57,6 +69,7 @@ function tgpDeletePage() {
 
 
 function tgpOpenCreatePageEl() {
+
     tgpReset(['selectedRange', 'codeviews', 'customModals', 'toolbars']);
 
     const modalId = 'tgp-create-page-el';
@@ -74,45 +87,29 @@ function tgpOpenCreatePageEl() {
     headlinePara.style.marginTop = 0;
     modalBody.appendChild(headlinePara);
 
-    const elementOptions = [
-      { imageSrc: 'trongate_pages_module/images/headline.png', label: 'Headline', type: 'Headline' },
-      { imageSrc: 'trongate_pages_module/images/text.png', label: 'Text Block', type: 'Text Block' },
-      { imageSrc: 'trongate_pages_module/images/divider.png', label: 'Divider', type: 'Divider' },
-      { imageSrc: 'trongate_pages_module/images/video.png', label: 'YouTube Video', type: 'YouTube Video' },
-      { imageSrc: 'trongate_pages_module/images/image.png', label: 'Image', type: 'Image' },
-      { imageSrc: 'trongate_pages_module/images/button.png', label: 'Button(s)', type: 'Button' }
-    ];
+  const targetUrl = trongatePagesObj.baseUrl + 'tgp_element_adder';
+  
+  const http = new XMLHttpRequest();
+  http.open('get', targetUrl);
+  http.setRequestHeader('Content-type', 'application/json');
+  http.send();
+  http.onload = function() {
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = http.responseText;
+    modalBody.appendChild(tempDiv.firstChild);
 
-    let pageElOptionsGrid = document.createElement('div');
-    pageElOptionsGrid.setAttribute('id', 'page-el-options-grid');
-    modalBody.appendChild(pageElOptionsGrid);
+      const closePara = document.createElement('p');
+      modalBody.appendChild(closePara);
 
-    elementOptions.forEach(option => {
-      let gridBox = document.createElement('div');
-      let upperDiv = document.createElement('div');
-      let upperDivPic = document.createElement('img');
-      upperDivPic.setAttribute('src', trongatePagesObj.baseUrl + option.imageSrc);
-      upperDiv.appendChild(upperDivPic);
-      gridBox.appendChild(upperDiv);
+      // Add a cancel button
+      const closeModalBtn = document.createElement('button');
+      closeModalBtn.setAttribute('class', 'alt');
+      closeModalBtn.setAttribute('type', 'button');
+      closeModalBtn.innerText = 'Cancel';
+      closeModalBtn.setAttribute('onclick', 'tgpCloseAndDestroyModal(\'' + modalId + '\')');
+      closePara.appendChild(closeModalBtn);
+  }
 
-      let lowerDiv = document.createElement('div');
-      lowerDiv.innerHTML = option.label;
-      gridBox.appendChild(lowerDiv);
-
-      pageElOptionsGrid.appendChild(gridBox);
-      gridBox.setAttribute('onclick', `tgpAddPageElement('${option.type}')`);
-    });
-
-    const closePara = document.createElement('p');
-    modalBody.appendChild(closePara);
-
-    // Add a cancel button
-    const closeModalBtn = document.createElement('button');
-    closeModalBtn.setAttribute('class', 'alt');
-    closeModalBtn.setAttribute('type', 'button');
-    closeModalBtn.innerText = 'Cancel';
-    closeModalBtn.setAttribute('onclick', 'tgpCloseAndDestroyModal(\'' + modalId + '\', false)');
-    closePara.appendChild(closeModalBtn);
 }
 
 function tgpBuildCustomModal(modalId, options = {}) {
@@ -153,6 +150,48 @@ function tgpBuildCustomModal(modalId, options = {}) {
     newModal.style.maxWidth = maxWidthValue;
     newModal.style.width = widthValue;
     return newModal;
+}
+
+function tgpHideModalBody(targetModalBody, addSpinner=false) {
+
+    const targetModalBodyChildren = targetModalBody.children;
+    for (var i = 0; i < targetModalBodyChildren.length; i++) {
+      targetModalBodyChildren[i].style.opacity = 0;
+    }
+
+    if(addSpinner === true) {
+        // Add a spinner.
+        const spinnerDiv = document.createElement('div');
+        spinnerDiv.setAttribute('class', 'spinner');
+
+        // Apply CSS to center the spinner
+        spinnerDiv.style.position = 'absolute';
+        spinnerDiv.style.top = '50%';
+        spinnerDiv.style.left = '50%';
+        spinnerDiv.style.transform = 'translate(-50%, -50%)';
+        targetModalBody.appendChild(spinnerDiv);
+    }
+
+}
+
+function tgpClearModalBody(targetModalBody, addSpinner=false) {
+    while(targetModalBody.firstChild) {
+        targetModalBody.removeChild(targetModalBody.lastChild);
+    }
+
+    if(addSpinner === true) {
+        // Add a spinner.
+        const spinnerDiv = document.createElement('div');
+        spinnerDiv.setAttribute('class', 'spinner');
+
+        // Apply CSS to center the spinner
+        spinnerDiv.style.position = 'absolute';
+        spinnerDiv.style.top = '50%';
+        spinnerDiv.style.left = '50%';
+        spinnerDiv.style.transform = 'translate(-50%, -50%)';
+        targetModalBody.appendChild(spinnerDiv);
+    }
+
 }
 
 function tgpRemoveCustomModals() {
@@ -219,44 +258,41 @@ function tgpInsertElement(newEl) {
     newEl = document.createElement('img');
     newEl.src = imgPath;
     newEl.addEventListener("click", (ev) => {
-      buildEditImgModal(ev.target);
+      tgpBuildEditImgModal(ev.target);
     });
   }
 
   const { targetNewElLocation, defaultActiveElParent, activeElParent, activeEl } = trongatePagesObj;
 
   switch (targetNewElLocation) {
-    case 'page-top':
-      defaultActiveElParent.prepend(newEl);
-      break;
-    case 'above-selected':
-      activeElParent.insertBefore(newEl, activeEl);
-      break;
-    case 'inside-selected':
-      const range = tgpGetStoredRange();
-      if (range) {
-        // Split the text node at the selected position
-        const selectedNode = window.getSelection().anchorNode;
-        const selectedOffset = window.getSelection().anchorOffset;
-        const newNode = selectedNode.splitText(selectedOffset);
-
-        //extract the image from within the img container div
-        const newImg = newEl.querySelector('img');
-
-        // Insert the image node in between the split text nodes
-        selectedNode.parentNode.insertBefore(newImg, newNode);
-      } else {
-        // Add to bottom of page
-        defaultActiveElParent.appendChild(newEl);
-      }
-      trongatePagesObj.storedRange = null;
-      break;
-    case 'below-selected':
-      tgpInsertAfter(newEl, activeEl);
-      break;
-    default:
-      defaultActiveElParent.appendChild(newEl);
+      case 'page-top':
+          defaultActiveElParent.prepend(newEl);
+          break;
+      case 'above-selected':
+          activeElParent.insertBefore(newEl, activeEl);
+          break;
+      case 'inside-selected':
+          const range = tgpGetStoredRange();
+          const selection = window.getSelection();
+          if (range && selection.rangeCount > 0) {
+              const selectedNode = window.getSelection().anchorNode;
+              const selectedOffset = window.getSelection().anchorOffset;
+              const newNode = selectedNode.splitText(selectedOffset);
+              const newImg = newEl.querySelector('img');
+              selectedNode.parentNode.insertBefore(newImg, newNode);
+          } else {
+              defaultActiveElParent.appendChild(newEl);
+              trongatePagesObj.storedRange = null;
+          }
+          break;
+      case 'below-selected':
+          tgpInsertAfter(newEl, activeEl);
+          break;
+      default:
+          defaultActiveElParent.appendChild(newEl);
   }
+
+
 
 }
 
@@ -610,13 +646,18 @@ function tgpInterceptAddPageElement(el, newElType) {
     optionRow.appendChild(optionBtn);
     elLocationSelectorDiv.appendChild(optionRow);
 
-    optionRow = document.createElement('div');
-    optionBtn = document.createElement('button');
-    optionBtn.innerHTML = 'Inside The Selected Element';
-    optionBtn.setAttribute('id', 'el-location-btn-inside-selected');
-    optionBtn.setAttribute('onclick', 'tgpChooseImgLocation("' + el + '", "' + optionBtn.id + '")');
-    optionRow.appendChild(optionBtn);
-    elLocationSelectorDiv.appendChild(optionRow);
+    const selection = window.getSelection();    
+    const selectedNode = selection.anchorNode;
+
+    if (selectedNode.nodeType === Node.TEXT_NODE) {
+      optionRow = document.createElement('div');
+      optionBtn = document.createElement('button');
+      optionBtn.innerHTML = 'Inside The Selected Element';
+      optionBtn.setAttribute('id', 'el-location-btn-inside-selected');
+      optionBtn.setAttribute('onclick', 'tgpChooseImgLocation("' + el + '", "' + optionBtn.id + '")');
+      optionRow.appendChild(optionBtn);
+      elLocationSelectorDiv.appendChild(optionRow);
+    }
 
     optionRow = document.createElement('div');
     optionBtn = document.createElement('button');

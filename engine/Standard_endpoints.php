@@ -843,6 +843,8 @@ class Standard_endpoints extends Trongate {
             //user id segment authorization (only for Trongate API paths!)
             if (isset($endpoint_auth_rules['userIdSegment'])) {
                 $target_value = segment($endpoint_auth_rules['userIdSegment']);
+                settype($target_value, 'int');
+                
                 if ($trongate_user_id === $target_value) {
                     return $token; //match for trongate_user_id on target segment
                 }
@@ -851,6 +853,7 @@ class Standard_endpoints extends Trongate {
             //user code segment authorization (only for Trongate API paths!)
             if (isset($endpoint_auth_rules['userCodeSegment'])) {
                 $target_value = segment($endpoint_auth_rules['userCodeSegment']);
+                
                 if ($trongate_user_code === $target_value) {
                     return $token; //match for trongate_user_code on target segment
                 }
@@ -975,7 +978,7 @@ class Standard_endpoints extends Trongate {
                 }
             }
 
-            $row_data['value'] = trim($value);
+            $row_data['value'] = (gettype($value) === 'string') ? trim($value) : $value;
             $query_params[] = $row_data;
         }
 

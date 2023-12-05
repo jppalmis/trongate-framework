@@ -26,8 +26,6 @@ function tgpOpenCodeViewModal() {
 
     // Create the form element with action and method attributes
     const formElement = document.createElement("form");
-    formElement.setAttribute("action", "http://localhost/tronpress/trongate_pages/submit_delete/4");
-    formElement.setAttribute("method", "post");
 
     // Create the modal body element with style and content
     const modalBody = document.createElement("div");
@@ -40,7 +38,8 @@ function tgpOpenCodeViewModal() {
     contentAsCode.style.opacity = 0;
 
     setTimeout(() => {
-        const pageContent = document.getElementsByClassName('page-content')[0];
+
+        let pageContent = document.getElementsByClassName('page-content')[0];
         let htmlContent = pageContent.innerHTML;
         htmlContent = htmlContent.replace(/ style=""/g, '');
         htmlContent = htmlContent.replace(/style=""/g, '');
@@ -95,16 +94,9 @@ function tgpOpenCodeViewModal() {
     modalFooter.appendChild(cancelButton);
     modalFooter.appendChild(updatePageContentBtn);
 
-    // Create the hidden input field with csrf_token value
-    const csrfInput = document.createElement("input");
-    csrfInput.setAttribute("type", "hidden");
-    csrfInput.setAttribute("name", "csrf_token");
-    csrfInput.setAttribute("value", "$2y$11$LMeP4WHpygAeBZz5MbF3PO9IlIAbSx8SPpvLNKcxLcWs2UXa3jRoO");
-
     // Add all the elements to the DOM in the proper order
     formElement.appendChild(modalBody);
     formElement.appendChild(modalFooter);
-    formElement.appendChild(csrfInput);
 
     codeViewModal.appendChild(modalHeading);
     codeViewModal.appendChild(formElement);

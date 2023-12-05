@@ -202,7 +202,6 @@ function tgpAddPointersToBtnDivs() {
   parentElement.addEventListener('click', (event) => {
 
     if (event.target.closest('div.button-div')) {
-      console.log('clicked btn div');
       trongatePagesObj.activeEl = event.target.closest('div.button-div');
       tgpAddButtonEditor(trongatePagesObj.activeEl);
     }
@@ -268,6 +267,9 @@ function handlePlusButtonClick() {
     currentFontSize += 0.2;
     activeEl.style.fontSize = `${currentFontSize}em`;
     const selection = window.getSelection();
+    if (selection.rangeCount > 0) {
+        currentSelectedRange = selection.getRangeAt(0).cloneRange();
+    }
     selection.removeAllRanges();
   }
 }
@@ -281,6 +283,9 @@ function handleMinusButtonClick() {
     currentFontSize -= 0.2;
     activeEl.style.fontSize = `${currentFontSize}em`;
     const selection = window.getSelection();
+    if (selection.rangeCount > 0) {
+        currentSelectedRange = selection.getRangeAt(0).cloneRange();
+    }
     selection.removeAllRanges();
   }
 }
